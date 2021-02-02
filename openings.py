@@ -25,32 +25,19 @@ def dontlose(board, pov):
     return 1.0 - wdl.losing_chance()
 
 
-# We force modern by only allowing knight, biship and b/g pawn moves in first two
-MODERN_FROM_SQUARES = {
-    chess.B2,
-    chess.G2,
-    chess.C1,
-    chess.F1,
-    chess.B1,
-    chess.A3,
-    chess.C3,
-    chess.G1,
-    chess.F3,
-    chess.H3,
-    chess.B7,
-    chess.G7,
-    chess.C8,
-    chess.F8,
-    chess.B8,
-    chess.A6,
-    chess.C6,
-    chess.G8,
-    chess.F6,
-    chess.H8,
-}
+CENTER_SQUARES = {chess.E4, chess.E5, chess.D4, chess.D5}
+
+
+# Not really that modern, we just call it that because we adopt the principal of
+# not occuping the center squares ourself for the first two movees
 def force_modern(board, pov):
-    if board.ply() <= 4 and not board.peek().from_square in MODERN_FROM_SQUARES:
-        return chess.engine.Mate(-0)
+    if board.ply() <= 4:
+        board_copy = board.copy()
+        move = board_copy.pop()
+        if move.to_square in CENTER_SQUARES and not board_copy.is_capture(move):
+            return chess.engine.Mate(-0)
+        else:
+            return engine.analyse(board, chess.engine.Limit(depth=20))["score"].pov(pov)
 
     return engine.analyse(board, chess.engine.Limit(depth=15))["score"].pov(pov)
 
