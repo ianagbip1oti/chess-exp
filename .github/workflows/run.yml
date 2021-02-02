@@ -20,6 +20,7 @@ jobs:
           prerelease: false
   run:
     runs-on: ubuntu-latest
+    needs: release
     strategy:
       matrix:
         book: [winw, winb, loseb, losew, modw, modb]
