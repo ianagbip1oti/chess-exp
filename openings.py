@@ -9,7 +9,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
-MAX_PLY = 10
+MAX_PLY = 4
 
 engine = chess.engine.SimpleEngine.popen_uci("/usr/bin/stockfish")
 
@@ -23,6 +23,36 @@ def dontlose(board, pov):
     score = engine.analyse(board, chess.engine.Limit(depth=15))
     wdl = score["score"].pov(pov).wdl(model="sf12", ply=board.ply())
     return 1.0 - wdl.losing_chance()
+
+
+# We force modern by only allowing knight, biship and b/g pawn moves in first two
+MODERN_FROM_SQUARES = {
+    chess.B2,
+    chess.G2,
+    chess.C1,
+    chess.F1,
+    chess.B1,
+    chess.A3,
+    chess.C3,
+    chess.G1,
+    chess.F3,
+    chess.H3,
+    chess.B7,
+    chess.G7,
+    chess.C8,
+    chess.F8,
+    chess.B8,
+    chess.A6,
+    chess.C6,
+    chess.G8,
+    chess.F6,
+    chess.H8,
+}
+def force_modern(board, pov):
+    if board.ply() <= 4 and not board.peek().from_square in MODERN_FROM_SQUARES:
+        return chess.engine.Mate(-0)
+
+    return engine.analyse(board, chess.engine.Limit(depth=15))["score"].pov(pov)
 
 
 def find_best_move(board, heuristic):
@@ -75,7 +105,9 @@ def get_opposing_moves(board, min_moves=2, min_pct=0.05):
 
     return sorted(table.keys(), key=lambda k: -table[k])[:min_moves]
 
+
 OPENING_MOVES = [chess.Move.from_uci(m) for m in ("e2e4", "d2d4", "c2c4", "g1f3")]
+
 
 def build(heuristic, color):
     best_moves = {}
@@ -104,7 +136,6 @@ def build(heuristic, color):
         logging.info("q: %d, ply: %d, %s", len(q), board.ply(), board.san(best))
 
         board.push(best)
-
 
         if board.ply() < MAX_PLY - color and (opp_moves := get_opposing_moves(board)):
             for m in opp_moves:
@@ -144,5 +175,13 @@ try:
     if what == "loseb":
         logging.info("Don't lose for black...")
         build(dontlose, chess.BLACK)
+
+    if what == "modw":
+        logging.info("Modern for white...")
+        build(force_modern, chess.WHITE)
+
+    if what == "modb":
+        logging.info("Modern for black...")
+        build(force_modern, chess.BLACK)
 finally:
     engine.quit()

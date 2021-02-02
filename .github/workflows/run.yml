@@ -5,24 +5,27 @@ on:
     branches: [ main ]
 
 jobs:
-  run:
+  release:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        book: [winw, winb, loseb, losew]
-
     steps:
-      - uses: actions/checkout@v2
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{matrix.book}}-${{ github.run_id }}
-          release_name: Release ${{matrix.book}}-${{ github.run_id }}
+          tag_name: ${{ github.run_id }}
+          release_name: Release ${{ github.run_id }}
           draft: false
           prerelease: false
+  run:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        book: [winw, winb, loseb, losew, modw, modb]
+
+    steps:
+      - uses: actions/checkout@v2
       - run: ./run.sh ${{ matrix.book }}
       - name: Upload Release Asset
         id: upload-release-asset 
@@ -33,6 +36,7 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }} 
           asset_path: ./out/${{ matrix.book }}.pgn
           asset_name: ${{ matrix.book }}.pgn
+          asset_content_type: application/vnd.chess-pgn
 
 
 
