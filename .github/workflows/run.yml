@@ -19,8 +19,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{matrix.book}}-${{ github.ref }}
-          release_name: Release ${{matrix.book}}-${{ github.ref }}
+          tag_name: ${{matrix.book}}-${{ github.run_id }}
+          release_name: Release ${{matrix.book}}-${{ github.run_id }}
           draft: false
           prerelease: false
       - run: ./run.sh ${{ matrix.book }}
