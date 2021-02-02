@@ -16,17 +16,10 @@ engine = chess.engine.SimpleEngine.popen_uci("/usr/bin/stockfish")
 
 def winning(board, pov):
     score = engine.analyse(board, chess.engine.Limit(depth=15))
-    return score["score"].pov(pov).wdl(model="sf12", ply=board.ply()).winning_chance()
-
-
-def dontlose(board, pov):
-    score = engine.analyse(board, chess.engine.Limit(depth=15))
-    wdl = score["score"].pov(pov).wdl(model="sf12", ply=board.ply())
-    return 1.0 - wdl.losing_chance()
+    return score["score"].pov(pov)
 
 
 CENTER_SQUARES = {chess.E4, chess.E5, chess.D4, chess.D5}
-
 
 # Not really that modern, we just call it that because we adopt the principal of
 # not occuping the center squares ourself for the first two movees
@@ -154,14 +147,6 @@ try:
     if what == "winb":
         logging.info("Winning for black...")
         build(winning, chess.BLACK)
-
-    if what == "losew":
-        logging.info("Don't lose for white...")
-        build(dontlose, chess.WHITE)
-
-    if what == "loseb":
-        logging.info("Don't lose for black...")
-        build(dontlose, chess.BLACK)
 
     if what == "modw":
         logging.info("Modern for white...")
