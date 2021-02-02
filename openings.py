@@ -9,7 +9,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
-MAX_PLY = 4
+MAX_PLY = 10
 
 engine = chess.engine.SimpleEngine.popen_uci("/usr/bin/stockfish")
 
