@@ -1,3 +1,4 @@
+import collections
 import sys
 import functools
 import requests
@@ -10,7 +11,7 @@ import time
 
 logging.basicConfig(level=logging.INFO)
 
-MAX_PLY = 16
+MAX_PLY = 15
 
 engine = chess.engine.SimpleEngine.popen_uci("/usr/bin/stockfish")
 
@@ -106,7 +107,7 @@ def get_moves_table(board):
 
     # arbitrary number chosen for when we consider it unreliable/not useful/
     # not popular enough to bother analyzing
-    if total_moves < 50:
+    if total_moves < 100:
         return table
 
     for move in r["moves"]:
@@ -135,16 +136,16 @@ OPENING_MOVES = [chess.Move.from_uci(m) for m in ("e2e4", "d2d4", "c2c4", "g1f3"
 def build(heuristic, color):
     best_moves = {}
 
-    q = []
+    q = collections.deque()
     terminal = []
 
     if color == chess.WHITE:
-        q.append(chess.Board())
+        q.appendleft(chess.Board())
     else:
         for m in OPENING_MOVES:
             board = chess.Board()
             board.push(m)
-            q.append(board)
+            q.appendleft(board)
 
     while q:
         board = q.pop()
@@ -164,7 +165,7 @@ def build(heuristic, color):
             for m in opp_moves:
                 board_copy = board.copy()
                 board_copy.push(m)
-                q.append(board_copy)
+                q.appendleft(board_copy)
         else:
             terminal.append(board)
 
