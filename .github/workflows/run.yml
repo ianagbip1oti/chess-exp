@@ -25,7 +25,7 @@ jobs:
     needs: release
     strategy:
       matrix:
-        book: [winw, winb, modw, modb]
+        book: [winw, winb, modw, modb, licw, licb]
 
     steps:
       - uses: actions/checkout@v2

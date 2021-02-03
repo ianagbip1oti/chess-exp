@@ -8,7 +8,7 @@ what=$@
 
 if [[ -z "$what" ]]
 then
-  what="winw winb modw modb"
+  what="winw winb modw modb licw licb"
 fi
 
 for w in $what

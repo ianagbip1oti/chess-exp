@@ -35,6 +35,36 @@ def force_modern(board, pov):
     return engine.analyse(board, chess.engine.Limit(depth=15))["score"].pov(pov)
 
 
+# TODO: strategy based upon lichess results
+# Choose most played moves (same logic as opposition moves we consider)
+# Choose the one with the highest winning pct
+def lichess_winrate(board, pov):
+    min_pct = 0.05
+    min_moves = 2
+
+    board_copy = board.copy()
+    move = board_copy.pop()
+
+    r = get_moves_table_fen(board_copy.fen())
+
+    total_moves = r["white"] + r["black"] + r["draws"]
+
+    table = {}
+
+    for m in r["moves"]:
+        count = m["white"] + m["black"] + m["draws"]
+        wins = m["white"] if pov == chess.WHITE else m["black"]
+
+        table[chess.Move.from_uci(m["uci"])] = (count / total_moves, wins / count)
+
+    candidates = [k for k in table.keys() if table[k][0] > min_pct]
+
+    if len(candidates) < min_moves:
+        candidates = sorted(table.keys(), key=lambda k: -table[k][0])[:min_moves]
+
+    return table[move][1] if move in candidates else 0.0
+
+
 def find_best_move(board, heuristic):
     moves = []
 
@@ -47,7 +77,17 @@ def find_best_move(board, heuristic):
 
 
 def get_moves_table(board):
-    return get_moves_table_fen(board.fen())
+    r = get_moves_table_fen(board.fen())
+
+    total_moves = r["white"] + r["black"] + r["draws"]
+
+    table = {}
+
+    for move in r["moves"]:
+        count = move["white"] + move["black"] + move["draws"]
+        table[chess.Move.from_uci(move["uci"])] = count / total_moves
+
+    return table
 
 
 @functools.cache
@@ -62,17 +102,7 @@ def get_moves_table_fen(fen):
         "ratings[]": [1600, 1800, 2000, 2200],
     }
 
-    r = requests.get("https://explorer.lichess.ovh/lichess", params=params).json()
-
-    total_moves = r["white"] + r["black"] + r["draws"]
-
-    table = {}
-
-    for move in r["moves"]:
-        count = move["white"] + move["black"] + move["draws"]
-        table[chess.Move.from_uci(move["uci"])] = count / total_moves
-
-    return table
+    return requests.get("https://explorer.lichess.ovh/lichess", params=params).json()
 
 
 def get_opposing_moves(board, min_moves=2, min_pct=0.05):
@@ -155,5 +185,13 @@ try:
     if what == "modb":
         logging.info("Modern for black...")
         build(force_modern, chess.BLACK)
+
+    if what == "licw":
+        logging.info("Lichess winrate for white...")
+        build(lichess_winrate, chess.WHITE)
+
+    if what == "licb":
+        logging.info("Lichess winrate for black...")
+        build(lichess_winrate, chess.BLACK)
 finally:
     engine.quit()
