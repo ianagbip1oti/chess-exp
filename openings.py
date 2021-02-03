@@ -34,13 +34,6 @@ def lichess_winrate(board, pov):
 
     total_moves = r["white"] + r["black"] + r["draws"]
 
-    if total_moves < 100:
-        return (
-            winning(board, pov)
-            .wdl(model="lichess", ply=board_copy.ply())
-            .winning_chance()
-        )
-
     table = {}
 
     for m in r["moves"]:
@@ -60,7 +53,16 @@ def lichess_winrate(board, pov):
     if len(candidates) < min_moves:
         candidates = sorted(table.keys(), key=lambda k: -table[k][0])[:min_moves]
 
-    return table[move][2] if move in candidates else 0.0
+    if move in candidates and table[move][1] > 50:
+        return table[move][2]
+    elif move in candidates:
+        return (
+            winning(board, pov)
+            .wdl(model="lichess", ply=board_copy.ply())
+            .winning_chance()
+        )
+    else:
+        return 0
 
 
 def find_best_move(board, heuristic):
