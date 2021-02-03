@@ -11,7 +11,8 @@ import time
 
 logging.basicConfig(level=logging.INFO)
 
-MAX_PLY = 14
+# 14 = 14/2 = 7 for black, 8 for white
+MAX_PLY = 14 
 
 engine = chess.engine.SimpleEngine.popen_uci("/usr/bin/stockfish")
 
@@ -24,13 +25,21 @@ def winning(board, pov):
 # Choose most played moves (same logic as opposition moves we consider)
 # Choose the one with the highest winning pct
 def lichess_winrate(board, pov):
+    return winrate(board, pov, get_moves_table_fen)
+
+
+def masters_winrate(board, pov):
+    return winrate(board, pov, get_masters_table_fen)
+
+
+def winrate(board, pov, get_moves_table):
     min_pct = 0.05
     min_moves = 2
 
     board_copy = board.copy()
     move = board_copy.pop()
 
-    r = get_moves_table_fen(board_copy.fen())
+    r = get_moves_table(board_copy.fen())
 
     total_moves = r["white"] + r["black"] + r["draws"]
 
@@ -101,6 +110,28 @@ def get_moves_table_fen(fen):
             logging.info("Pausing for rate limit...")
             time.sleep(60)
             rsp = requests.get("https://explorer.lichess.ovh/lichess", params=params)
+
+        return rsp.json()
+    except:
+        logging.warning("response: %s", rsp)
+
+
+@functools.cache
+def get_masters_table_fen(fen):
+    params = {
+        "fen": fen,
+        "moves": 15,
+        "topGames": 0,
+        "recentGames": 0,
+        "variant": "standard",
+    }
+
+    try:
+        rsp = requests.get("https://explorer.lichess.ovh/master", params=params)
+        if rsp.status_code == 429:
+            logging.info("Pausing for rate limit...")
+            time.sleep(60)
+            rsp = requests.get("https://explorer.lichess.ovh/master", params=params)
 
         return rsp.json()
     except:
@@ -200,5 +231,14 @@ try:
     if what == "licb":
         logging.info("Lichess winrate for black...")
         build(lichess_winrate, chess.BLACK)
+
+    if what == "masw":
+        logging.info("Masters winrate for white...")
+        build(masters_winrate, chess.WHITE)
+
+    if what == "masb":
+        logging.info("Masters winrate for black...")
+        build(masters_winrate, chess.BLACK)
+
 finally:
     engine.quit()
