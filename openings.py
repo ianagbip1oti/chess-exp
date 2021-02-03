@@ -6,6 +6,7 @@ import chess
 import chess.engine
 import chess.pgn
 import logging
+import time
 
 logging.basicConfig(level=logging.INFO)
 
@@ -19,23 +20,6 @@ def winning(board, pov):
     return score["score"].pov(pov)
 
 
-CENTER_SQUARES = {chess.E4, chess.E5, chess.D4, chess.D5}
-
-# Not really that modern, we just call it that because we adopt the principal of
-# not occuping the center squares ourself for the first two movees
-def force_modern(board, pov):
-    if board.ply() <= 4:
-        board_copy = board.copy()
-        move = board_copy.pop()
-        if move.to_square in CENTER_SQUARES and not board_copy.is_capture(move):
-            return chess.engine.Mate(-0)
-        else:
-            return engine.analyse(board, chess.engine.Limit(depth=20))["score"].pov(pov)
-
-    return engine.analyse(board, chess.engine.Limit(depth=15))["score"].pov(pov)
-
-
-# TODO: strategy based upon lichess results
 # Choose most played moves (same logic as opposition moves we consider)
 # Choose the one with the highest winning pct
 def lichess_winrate(board, pov):
@@ -48,6 +32,14 @@ def lichess_winrate(board, pov):
     r = get_moves_table_fen(board_copy.fen())
 
     total_moves = r["white"] + r["black"] + r["draws"]
+
+    if total_moves < 100:
+        logging.warn("Falling back to stockfish...")
+        return (
+            winning(board, pov)
+            .wdl(model="lichess", ply=board_copy.ply())
+            .winning_chance()
+        )
 
     table = {}
 
@@ -102,7 +94,16 @@ def get_moves_table_fen(fen):
         "ratings[]": [1600, 1800, 2000, 2200],
     }
 
-    return requests.get("https://explorer.lichess.ovh/lichess", params=params).json()
+    try:
+        rsp = requests.get("https://explorer.lichess.ovh/lichess", params=params)
+        if rsp.status_code == 429:
+            logging.info("Pausing for rate limit...")
+            time.sleep(60)
+            rsp = requests.get("https://explorer.lichess.ovh/lichess", params=params)
+
+        return rsp.json()
+    except:
+        logging.warning("response: %s", rsp)
 
 
 def get_opposing_moves(board, min_moves=2, min_pct=0.05):
@@ -169,22 +170,6 @@ def build(heuristic, color):
 
 try:
     what = sys.argv[1]
-
-    if what == "winw":
-        logging.info("Winning for white...")
-        build(winning, chess.WHITE)
-
-    if what == "winb":
-        logging.info("Winning for black...")
-        build(winning, chess.BLACK)
-
-    if what == "modw":
-        logging.info("Modern for white...")
-        build(force_modern, chess.WHITE)
-
-    if what == "modb":
-        logging.info("Modern for black...")
-        build(force_modern, chess.BLACK)
 
     if what == "licw":
         logging.info("Lichess winrate for white...")
