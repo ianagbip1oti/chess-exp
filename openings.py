@@ -11,7 +11,7 @@ import time
 
 logging.basicConfig(level=logging.INFO)
 
-MAX_PLY = 15
+MAX_PLY = 14
 
 engine = chess.engine.SimpleEngine.popen_uci("/usr/bin/stockfish")
 
@@ -161,7 +161,7 @@ def build(heuristic, color):
 
         board.push(best)
 
-        if board.ply() < MAX_PLY - color and (opp_moves := get_opposing_moves(board)):
+        if board.ply() < MAX_PLY + color and (opp_moves := get_opposing_moves(board)):
             for m in opp_moves:
                 board_copy = board.copy()
                 board_copy.push(m)
