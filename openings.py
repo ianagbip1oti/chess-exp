@@ -10,7 +10,7 @@ import time
 
 logging.basicConfig(level=logging.INFO)
 
-MAX_PLY = 10
+MAX_PLY = 14
 
 engine = chess.engine.SimpleEngine.popen_uci("/usr/bin/stockfish")
 
@@ -34,7 +34,6 @@ def lichess_winrate(board, pov):
     total_moves = r["white"] + r["black"] + r["draws"]
 
     if total_moves < 100:
-        logging.warn("Falling back to stockfish...")
         return (
             winning(board, pov)
             .wdl(model="lichess", ply=board_copy.ply())
@@ -47,14 +46,20 @@ def lichess_winrate(board, pov):
         count = m["white"] + m["black"] + m["draws"]
         wins = m["white"] if pov == chess.WHITE else m["black"]
 
-        table[chess.Move.from_uci(m["uci"])] = (count / total_moves, wins / count)
+        table[chess.Move.from_uci(m["uci"])] = (
+            count / total_moves,
+            count,
+            wins / count,
+        )
 
-    candidates = [k for k in table.keys() if table[k][0] > min_pct]
+    candidates = [
+        k for k in table.keys() if table[k][0] > min_pct or table[k][1] > 1_000_000
+    ]
 
     if len(candidates) < min_moves:
         candidates = sorted(table.keys(), key=lambda k: -table[k][0])[:min_moves]
 
-    return table[move][1] if move in candidates else 0.0
+    return table[move][2] if move in candidates else 0.0
 
 
 def find_best_move(board, heuristic):
@@ -66,20 +71,6 @@ def find_best_move(board, heuristic):
         moves.append((m, heuristic(board_copy, board.turn)))
 
     return sorted(moves, key=lambda x: -x[1])[0][0]
-
-
-def get_moves_table(board):
-    r = get_moves_table_fen(board.fen())
-
-    total_moves = r["white"] + r["black"] + r["draws"]
-
-    table = {}
-
-    for move in r["moves"]:
-        count = move["white"] + move["black"] + move["draws"]
-        table[chess.Move.from_uci(move["uci"])] = count / total_moves
-
-    return table
 
 
 @functools.cache
@@ -106,15 +97,31 @@ def get_moves_table_fen(fen):
         logging.warning("response: %s", rsp)
 
 
+def get_moves_table(board):
+    r = get_moves_table_fen(board.fen())
+
+    total_moves = r["white"] + r["black"] + r["draws"]
+
+    table = {}
+
+    for move in r["moves"]:
+        count = move["white"] + move["black"] + move["draws"]
+        table[chess.Move.from_uci(move["uci"])] = (count / total_moves, count)
+
+    return table
+
+
 def get_opposing_moves(board, min_moves=2, min_pct=0.05):
     table = get_moves_table(board)
 
-    pass_pct = [k for k in table.keys() if table[k] > min_pct]
+    pass_pct = [
+        k for k in table.keys() if table[k][0] > min_pct or table[k][1] > 1_000_000
+    ]
 
     if len(pass_pct) > min_moves:
         return pass_pct
 
-    return sorted(table.keys(), key=lambda k: -table[k])[:min_moves]
+    return sorted(table.keys(), key=lambda k: -table[k][0])[:min_moves]
 
 
 OPENING_MOVES = [chess.Move.from_uci(m) for m in ("e2e4", "d2d4", "c2c4", "g1f3")]
