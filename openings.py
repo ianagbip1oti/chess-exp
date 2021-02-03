@@ -10,7 +10,7 @@ import time
 
 logging.basicConfig(level=logging.INFO)
 
-MAX_PLY = 14
+MAX_PLY = 16
 
 engine = chess.engine.SimpleEngine.popen_uci("/usr/bin/stockfish")
 
@@ -103,6 +103,11 @@ def get_moves_table(board):
     total_moves = r["white"] + r["black"] + r["draws"]
 
     table = {}
+
+    # arbitrary number chosen for when we consider it unreliable/not useful/
+    # not popular enough to bother analyzing
+    if total_moves < 50:
+        return table
 
     for move in r["moves"]:
         count = move["white"] + move["black"] + move["draws"]
