@@ -173,6 +173,10 @@ def get_opposing_moves(board, min_moves=2, min_pct=0.05):
 def prune(q, amt):
     logging.info("Pruning %d...", len(q))
 
+    if len(q) < amt:
+        logging.info("Pruned nothing to %d.", amt)
+        return q, []
+
     totals = {}
     for b in q:
         tbl = get_moves_table(b)
