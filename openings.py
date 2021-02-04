@@ -177,22 +177,28 @@ def prune(q, amt):
         logging.info("Pruned nothing to %d.", amt)
         return q, []
 
+    deduped = []
+    terminal = []
+
     totals = {}
     for b in q:
         if b.fen() in totals:
+            terminal.append(b)
             continue
 
         tbl = get_moves_table(b)
         totals[b.fen()] = sum(c for _, c in tbl.values())
 
+        deduped.append(b)
+
         if len(totals) % 20 == 0:
             logging.info("%d...", len(totals))
 
-    sorted_q = sorted(q, key=lambda b: -totals[b.fen()])
+    sorted_q = sorted(deduped, key=lambda b: -totals[b.fen()])
 
-    logging.info("Pruned to %d.", amt)
+    logging.info("Pruned to %d. (%d dupes)", amt, len(terminal))
 
-    return collections.deque(sorted_q[:amt]), sorted_q[amt:]
+    return collections.deque(sorted_q[:amt]), sorted_q[amt:] + terminal
 
 
 def build(heuristic, color):
