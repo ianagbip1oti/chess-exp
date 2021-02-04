@@ -170,6 +170,20 @@ def get_opposing_moves(board, min_moves=2, min_pct=0.05):
     return sorted(table.keys(), key=lambda k: -table[k][0])[:min_moves]
 
 
+def prune(q):
+    logging.info("Pruning (%d)...", len(q))
+
+    totals = {}
+    for b in q:
+        tbl = get_moves_table(b)
+        totals[b.fen()] = sum(c for _, c in tbl.values())
+
+    sorted_q = sorted(q, key=lambda b: totals[b.fen()])
+    mid = len(sorted_q) // 2
+
+    return collections.deque(sorted_q[:mid]), sorted_q[mid:]
+
+
 OPENING_MOVES = [chess.Move.from_uci(m) for m in ("e2e4", "d2d4", "c2c4", "g1f3")]
 
 
@@ -178,6 +192,7 @@ def build(heuristic, color):
 
     q = collections.deque()
     terminal = []
+    ply = 0
 
     if color == chess.WHITE:
         q.appendleft(chess.Board())
@@ -190,6 +205,13 @@ def build(heuristic, color):
     while q:
         board = q.pop()
         fen = board.fen()
+
+        if board.ply() != ply and board.ply() <= 10:
+            ply = board.ply()
+        elif board.ply() != ply:
+            q, t = prune(q)
+            terminal.extend(t)
+            ply = board.ply()
 
         best = best_moves.get(fen)
 
