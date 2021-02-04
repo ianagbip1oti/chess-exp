@@ -233,6 +233,9 @@ def build(heuristic, color):
 
     depths = {}
     for b in terminal:
+        if b.turn == color:
+            b.pop()
+
         depths[b.ply()] = depths.get(b.ply(), 0) + 1
         game = chess.pgn.Game()
         moves = b.move_stack
