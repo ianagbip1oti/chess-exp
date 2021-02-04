@@ -179,6 +179,9 @@ def prune(q, amt):
 
     totals = {}
     for b in q:
+        if b.fen() in totals:
+            continue
+
         tbl = get_moves_table(b)
         totals[b.fen()] = sum(c for _, c in tbl.values())
 
@@ -210,7 +213,7 @@ def build(heuristic, color):
 
     while q:
         board = q.pop()
-        fen = board.fen()
+        fen = board.board_fen()
 
         if board.ply() != ply:
             ply = board.ply()
