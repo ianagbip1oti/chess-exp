@@ -12,7 +12,7 @@ import time
 logging.basicConfig(level=logging.INFO)
 
 # 14 = 14/2 = 7 for black, 8 for white
-MAX_PLY = 14 
+MAX_PLY = 14
 
 engine = chess.engine.SimpleEngine.popen_uci("/usr/bin/stockfish")
 
@@ -147,7 +147,7 @@ def get_moves_table(board):
 
     # arbitrary number chosen for when we consider it unreliable/not useful/
     # not popular enough to bother analyzing
-    if total_moves < 100:
+    if total_moves < 200:
         return table
 
     for move in r["moves"]:
@@ -209,7 +209,9 @@ def build(heuristic, color):
         else:
             terminal.append(board)
 
+    depths = {}
     for b in terminal:
+        depths[b.ply()] = depths.get(b.ply(), 0) + 1
         game = chess.pgn.Game()
         moves = b.move_stack
 
@@ -219,6 +221,8 @@ def build(heuristic, color):
             node = node.add_main_variation(m)
 
         print(game, end="\n\n")
+
+    logging.info("Depths: %s", depths)
 
 
 try:
