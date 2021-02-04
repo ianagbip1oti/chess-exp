@@ -171,15 +171,20 @@ def get_opposing_moves(board, min_moves=2, min_pct=0.05):
 
 
 def prune(q):
-    logging.info("Pruning (%d)...", len(q))
+    logging.info("Pruning %d...", len(q))
 
     totals = {}
     for b in q:
         tbl = get_moves_table(b)
         totals[b.fen()] = sum(c for _, c in tbl.values())
 
-    sorted_q = sorted(q, key=lambda b: totals[b.fen()])
+        if len(totals) % 20 == 0:
+            logging.info("%d...", len(totals))
+
+    sorted_q = sorted(q, key=lambda b: -totals[b.fen()])
     mid = len(sorted_q) // 2
+
+    logging.info("Pruned to %d.", mid)
 
     return collections.deque(sorted_q[:mid]), sorted_q[mid:]
 
@@ -206,7 +211,7 @@ def build(heuristic, color):
         board = q.pop()
         fen = board.fen()
 
-        if board.ply() != ply and board.ply() < 8:
+        if board.ply() != ply and board.ply() < 6:
             ply = board.ply()
         elif board.ply() != ply:
             q, t = prune(q)
