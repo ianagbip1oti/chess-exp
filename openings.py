@@ -12,7 +12,7 @@ import time
 logging.basicConfig(level=logging.INFO)
 
 # 14 = 14/2 = 7 for black, 8 for white
-MAX_PLY = 14
+MAX_PLY = 24
 
 engine = chess.engine.SimpleEngine.popen_uci("/usr/bin/stockfish")
 
@@ -157,7 +157,7 @@ def get_moves_table(board):
     return table
 
 
-def get_opposing_moves(board, min_moves=2, min_pct=0.05):
+def get_opposing_moves(board, min_moves=2, min_pct=0.01):
     table = get_moves_table(board)
 
     pass_pct = [
@@ -170,7 +170,7 @@ def get_opposing_moves(board, min_moves=2, min_pct=0.05):
     return sorted(table.keys(), key=lambda k: -table[k][0])[:min_moves]
 
 
-def prune(q):
+def prune(q, amt):
     logging.info("Pruning %d...", len(q))
 
     totals = {}
@@ -182,14 +182,10 @@ def prune(q):
             logging.info("%d...", len(totals))
 
     sorted_q = sorted(q, key=lambda b: -totals[b.fen()])
-    mid = len(sorted_q) // 2
 
-    logging.info("Pruned to %d.", mid)
+    logging.info("Pruned to %d.", amt)
 
-    return collections.deque(sorted_q[:mid]), sorted_q[mid:]
-
-
-OPENING_MOVES = [chess.Move.from_uci(m) for m in ("e2e4", "d2d4", "c2c4", "g1f3")]
+    return collections.deque(sorted_q[:amt]), sorted_q[amt:]
 
 
 def build(heuristic, color):
@@ -202,21 +198,20 @@ def build(heuristic, color):
     if color == chess.WHITE:
         q.appendleft(chess.Board())
     else:
-        for m in OPENING_MOVES:
-            board = chess.Board()
-            board.push(m)
-            q.appendleft(board)
+        board = chess.Board()
+        for m in get_opposing_moves(board):
+            board_copy = board.copy()
+            board_copy.push(m)
+            q.appendleft(board_copy)
 
     while q:
         board = q.pop()
         fen = board.fen()
 
-        if board.ply() != ply and board.ply() < 6:
+        if board.ply() != ply:
             ply = board.ply()
-        elif board.ply() != ply:
-            q, t = prune(q)
+            q, t = prune(q, ply * 25)
             terminal.extend(t)
-            ply = board.ply()
 
         best = best_moves.get(fen)
 
