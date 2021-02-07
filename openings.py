@@ -89,6 +89,8 @@ def find_best_move(board, heuristic):
         board_copy.push(m)
         moves.append((m, heuristic(board_copy, board.turn)))
 
+    #logging.info("moves: %s", moves)
+
     return sorted(moves, key=lambda x: -x[1])[0][0]
 
 
@@ -231,6 +233,11 @@ def build(heuristic, color):
         if not best:
             best = find_best_move(board, heuristic)
             best_moves[fen] = best
+        else:
+            logging.info("Found cached for %s: %s", fen, best)
+
+        if best == chess.Move.from_uci("g2g4"):
+            logging.info("Found g4: %s", fen)
 
         logging.info("q: %d, ply: %d, %s", len(q), board.ply(), board.san(best))
 
@@ -264,6 +271,15 @@ def build(heuristic, color):
 
 
 try:
+    """
+    fen = "rn1qkb1r/pp1b1ppp/2p1pn2/3p4/2P5/2N1PN2/PPQP1PPP/R1B1KB1R w KQkq - 2 6"
+
+    while True:
+        board = chess.Board(fen=fen)
+
+        logging.info("Best: %s", find_best_move(board, lichess_winrate))
+
+    """
     what = sys.argv[1]
 
     if what == "licw":
@@ -281,6 +297,5 @@ try:
     if what == "masb":
         logging.info("Masters winrate for black...")
         build(masters_winrate, chess.BLACK)
-
 finally:
     engine.quit()
