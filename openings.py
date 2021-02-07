@@ -8,6 +8,7 @@ import chess.engine
 import chess.pgn
 import logging
 import time
+import math
 
 logging.basicConfig(level=logging.INFO)
 
@@ -25,11 +26,6 @@ def winning(board, pov):
 # Choose most played moves (same logic as opposition moves we consider)
 # Choose the one with the highest winning pct
 def lichess_winrate(board, pov):
-    def gmt(fen):
-        return get_moves_table_fen(
-            fen, speeds=["rapid", "classical"], ratings=[2000, 2200, 2500]
-        )
-
     return winrate(board, pov, get_moves_table_fen)
 
 
@@ -38,63 +34,54 @@ def masters_winrate(board, pov):
 
 
 def winrate(board, pov, get_moves_table):
-    min_pct = 0.05
-    min_moves = 2
+    r = get_moves_table(board.fen())
 
-    board_copy = board.copy()
-    move = board_copy.pop()
+    total = r["white"] + r["black"] + r["draws"]
+    wins = r["white"] if pov == chess.WHITE else r["black"]
 
-    r = get_moves_table(board_copy.fen())
+    if total == 0:
+        return 0.0
 
-    total_moves = r["white"] + r["black"] + r["draws"]
+    z = 1.96
+    phat = wins / total
 
-    if total_moves < 100:
-        return (
-            winning(board, pov)
-            .wdl(model="lichess", ply=board_copy.ply())
-            .winning_chance()
-        )
+    a = phat + z * z / (2 * total)
+    b = z * math.sqrt((phat * (1 - phat) + z * z / (4 * total)) / total)
+    c = 1 + z * z / total
 
-    table = {}
-
-    for m in r["moves"]:
-        count = m["white"] + m["black"] + m["draws"]
-        wins = m["white"] if pov == chess.WHITE else m["black"]
-
-        table[chess.Move.from_uci(m["uci"])] = (
-            count / total_moves,
-            count,
-            wins / count,
-        )
-
-    candidates = [
-        k for k in table.keys() if table[k][0] > min_pct or table[k][1] > 100_000
-    ]
-
-    if len(candidates) < min_moves:
-        candidates = sorted(table.keys(), key=lambda k: -table[k][0])[:min_moves]
-
-    if move in candidates and table[move][1] > 20:
-        return table[move][2]
-    elif move in candidates:
-        return (
-            winning(board, pov)
-            .wdl(model="lichess", ply=board_copy.ply())
-            .winning_chance()
-        )
-    else:
-        return 0
+    return (a - b) / c
 
 
 def find_best_move(board, heuristic):
+    before = heuristic(board, board.turn)
+
     moves = []
 
-    for m in board.legal_moves:
+    table = get_moves_table(board)
+
+    candidates = sorted(table.keys(), key=lambda k: -table[k][0])[:5]
+
+    for m in candidates:
         board_copy = board.copy()
         board_copy.push(m)
         moves.append((m, heuristic(board_copy, board.turn)))
 
-    # logging.info("moves: %s", moves)
+    top_score = sorted(moves, key=lambda x: -x[1])[0][1]
+
+    if top_score < 0.98 * before:
+        logging.info(
+            "Falling back to stockfish (%f) for %s", top_score - before, board.fen()
+        )
+        for m in board.legal_moves:
+            board_copy = board.copy()
+            board_copy.push(m)
+
+            sf = (
+                winning(board_copy, board.turn)
+                .wdl(model="lichess", ply=board_copy.ply())
+                .winning_chance()
+            )
+            moves.append((m, sf))
 
     return sorted(moves, key=lambda x: -x[1])[0][0]
 
@@ -211,7 +198,7 @@ def prune(q, amt):
     return collections.deque(sorted_q[:amt]), sorted_q[amt:] + terminal
 
 
-def build(heuristic, color):
+def build(heuristic, color, max_ply=MAX_PLY):
     best_moves = {}
 
     q = collections.deque()
@@ -246,7 +233,7 @@ def build(heuristic, color):
 
         board.push(best)
 
-        if board.ply() < MAX_PLY + color and (opp_moves := get_opposing_moves(board)):
+        if board.ply() < max_ply + color and (opp_moves := get_opposing_moves(board)):
             for m in opp_moves:
                 board_copy = board.copy()
                 board_copy.push(m)
@@ -275,21 +262,22 @@ def build(heuristic, color):
 
 try:
     what = sys.argv[1]
+    ply = int(sys.argv[2]) if len(sys.argv) > 2 else MAX_PLY
 
     if what == "licw":
         logging.info("Lichess winrate for white...")
-        build(lichess_winrate, chess.WHITE)
+        build(lichess_winrate, chess.WHITE, max_ply=ply)
 
     if what == "licb":
         logging.info("Lichess winrate for black...")
-        build(lichess_winrate, chess.BLACK)
+        build(lichess_winrate, chess.BLACK, max_ply=ply)
 
     if what == "masw":
         logging.info("Masters winrate for white...")
-        build(masters_winrate, chess.WHITE)
+        build(masters_winrate, chess.WHITE, max_ply=ply)
 
     if what == "masb":
         logging.info("Masters winrate for black...")
-        build(masters_winrate, chess.BLACK)
+        build(masters_winrate, chess.BLACK, max_ply=ply)
 finally:
     engine.quit()

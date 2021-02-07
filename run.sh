@@ -4,7 +4,7 @@ docker build . -t chess-exp:latest
 
 mkdir -p out
 
-what=$@
+what=$1
 
 if [[ -z "$what" ]]
 then
@@ -13,5 +13,5 @@ fi
 
 for w in $what
 do
-  docker run chess-exp:latest $w > out/$w.pgn
+  docker run chess-exp:latest $w $2 > out/$w.pgn
 done
