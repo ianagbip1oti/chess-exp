@@ -57,7 +57,7 @@ def find_best_move(board, heuristic):
 
     moves = []
 
-    table = get_moves_table(board)
+    table = get_moves_table(board, min_moves=0)
 
     candidates = sorted(table.keys(), key=lambda k: -table[k][0])[:5]
 
@@ -71,7 +71,7 @@ def find_best_move(board, heuristic):
     if moves:
         top_score = sorted(moves, key=lambda x: -x[1])[0][1]
 
-    if top_score < 0.98 * before:
+    if top_score < 0.95 * before:
         logging.info(
             "Falling back to stockfish (%f) for %s", top_score - before, board.fen()
         )
@@ -138,16 +138,14 @@ def get_masters_table_fen(fen):
         logging.warning("response: %s", rsp)
 
 
-def get_moves_table(board):
+def get_moves_table(board, min_moves=200):
     r = get_moves_table_fen(board.fen())
 
     total_moves = r["white"] + r["black"] + r["draws"]
 
     table = {}
 
-    # arbitrary number chosen for when we consider it unreliable/not useful/
-    # not popular enough to bother analyzing
-    if total_moves < 200:
+    if total_moves < min_moves:
         return table
 
     for move in r["moves"]:
@@ -158,7 +156,9 @@ def get_moves_table(board):
 
 
 def get_opposing_moves(board, min_moves=2, min_pct=0.05):
-    table = get_moves_table(board)
+    # arbitrary number chosen for when we consider it unreliable/not useful/
+    # not popular enough to bother analyzing
+    table = get_moves_table(board, min_moves=200)
 
     pass_pct = [
         k for k in table.keys() if table[k][0] > min_pct or table[k][1] > 100_000
