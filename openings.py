@@ -25,6 +25,11 @@ def winning(board, pov):
 # Choose most played moves (same logic as opposition moves we consider)
 # Choose the one with the highest winning pct
 def lichess_winrate(board, pov):
+    def gmt(fen):
+        return get_moves_table_fen(
+            fen, speeds=["rapid", "classical"], ratings=[2000, 2200, 2500]
+        )
+
     return winrate(board, pov, get_moves_table_fen)
 
 
@@ -63,7 +68,7 @@ def winrate(board, pov, get_moves_table):
         )
 
     candidates = [
-        k for k in table.keys() if table[k][0] > min_pct or table[k][1] > 1_000_000
+        k for k in table.keys() if table[k][0] > min_pct or table[k][1] > 100_000
     ]
 
     if len(candidates) < min_moves:
@@ -89,21 +94,24 @@ def find_best_move(board, heuristic):
         board_copy.push(m)
         moves.append((m, heuristic(board_copy, board.turn)))
 
-    #logging.info("moves: %s", moves)
+    # logging.info("moves: %s", moves)
 
     return sorted(moves, key=lambda x: -x[1])[0][0]
 
 
 @functools.cache
-def get_moves_table_fen(fen):
+def get_moves_table_fen(fen, speeds=None, ratings=None):
+    speeds = speeds or ["blitz", "rapid", "classical"]
+    ratings = ratings or [1600, 1800, 2000, 2200]
+
     params = {
         "fen": fen,
         "moves": 15,
         "topGames": 0,
         "recentGames": 0,
         "variant": "standard",
-        "speeds[]": ["blitz", "rapid", "classical"],
-        "ratings[]": [1600, 1800, 2000, 2200],
+        "speeds[]": speeds,
+        "ratings[]": ratings,
     }
 
     try:
@@ -163,7 +171,7 @@ def get_opposing_moves(board, min_moves=2, min_pct=0.05):
     table = get_moves_table(board)
 
     pass_pct = [
-        k for k in table.keys() if table[k][0] > min_pct or table[k][1] > 1_000_000
+        k for k in table.keys() if table[k][0] > min_pct or table[k][1] > 100_000
     ]
 
     if len(pass_pct) > min_moves:
@@ -233,11 +241,6 @@ def build(heuristic, color):
         if not best:
             best = find_best_move(board, heuristic)
             best_moves[fen] = best
-        else:
-            logging.info("Found cached for %s: %s", fen, best)
-
-        if best == chess.Move.from_uci("g2g4"):
-            logging.info("Found g4: %s", fen)
 
         logging.info("q: %d, ply: %d, %s", len(q), board.ply(), board.san(best))
 
@@ -271,15 +274,6 @@ def build(heuristic, color):
 
 
 try:
-    """
-    fen = "rn1qkb1r/pp1b1ppp/2p1pn2/3p4/2P5/2N1PN2/PPQP1PPP/R1B1KB1R w KQkq - 2 6"
-
-    while True:
-        board = chess.Board(fen=fen)
-
-        logging.info("Best: %s", find_best_move(board, lichess_winrate))
-
-    """
     what = sys.argv[1]
 
     if what == "licw":
