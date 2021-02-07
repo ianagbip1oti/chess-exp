@@ -66,7 +66,10 @@ def find_best_move(board, heuristic):
         board_copy.push(m)
         moves.append((m, heuristic(board_copy, board.turn)))
 
-    top_score = sorted(moves, key=lambda x: -x[1])[0][1]
+    top_score = 0.0
+
+    if moves:
+        top_score = sorted(moves, key=lambda x: -x[1])[0][1]
 
     if top_score < 0.98 * before:
         logging.info(
