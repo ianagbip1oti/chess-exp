@@ -208,6 +208,7 @@ def build(heuristic, color, max_ply=MAX_PLY):
     if color == chess.WHITE:
         board = chess.Board()
         best = find_best_move(board, heuristic)
+        logging.info("q: %d, ply: %d, %s", len(q), board.ply(), board.san(best))
         board.push(best)
         q.appendleft(board)
     else:
@@ -215,6 +216,8 @@ def build(heuristic, color, max_ply=MAX_PLY):
 
     while q:
         board = q.pop()
+
+        logging.info("q: %d, ply: %d", len(q), board.ply())
 
         if board.ply() != ply:
             ply = board.ply()
@@ -233,9 +236,7 @@ def build(heuristic, color, max_ply=MAX_PLY):
                     best = find_best_move(board_copy, heuristic)
                     best_moves[fen] = best
 
-                logging.info(
-                    "q: %d, ply: %d, %s", len(q), board_copy.ply(), board_copy.san(best)
-                )
+                logging.info("vs %s... %s", board.san(m), board_copy.san(best))
 
                 board_copy.push(best)
 
