@@ -184,7 +184,7 @@ def get_opposing_moves(board, min_moves=2, min_pct=0.5):
     ]
 
     if len(pass_pct) >= min_moves:
-        return pass_pct
+        return pass_pct[:7]
 
     return sorted(table.keys(), key=lambda k: -table[k][0])[:min_moves]
 
