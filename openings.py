@@ -231,14 +231,14 @@ def build(heuristic, color, max_ply=MAX_PLY):
         q.appendleft(chess.Board())
 
     while q:
+        if (next_ply := q[-1].ply()) != ply:
+            ply = next_ply
+            q, t = prune(q, ply * 20)
+            terminal.extend(t)
+
         board = q.pop()
 
         logging.info("q: %d, ply: %d", len(q), board.ply())
-
-        if board.ply() != ply:
-            ply = board.ply()
-            q, t = prune(q, ply * 20)
-            terminal.extend(t)
 
         if board.ply() < max_ply + color and (opp_moves := get_opposing_moves(board)):
             for m in opp_moves:
