@@ -108,7 +108,7 @@ def get_moves_table_fen(fen, speeds=None, ratings=None):
 
     params = {
         "fen": fen,
-        "moves": 15,
+        "moves": 10,
         "topGames": 0,
         "recentGames": 0,
         "variant": "standard",
@@ -184,7 +184,7 @@ def get_opposing_moves(board, min_moves=2, min_pct=0.5):
     ]
 
     if len(pass_pct) >= min_moves:
-        return pass_pct[:7]
+        return pass_pct[:10]
 
     return sorted(table.keys(), key=lambda k: -table[k][0])[:min_moves]
 
