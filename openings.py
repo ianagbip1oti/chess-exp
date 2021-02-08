@@ -16,6 +16,7 @@ logging.basicConfig(level=logging.INFO)
 MAX_PLY = 24
 
 engine = chess.engine.SimpleEngine.popen_uci("/usr/bin/stockfish")
+session = requests.Session()
 
 
 def winning(board, pov):
@@ -105,11 +106,11 @@ def get_moves_table_fen(fen, speeds=None, ratings=None):
     }
 
     try:
-        rsp = requests.get("https://explorer.lichess.ovh/lichess", params=params)
+        rsp = session.get("https://explorer.lichess.ovh/lichess", params=params)
         if rsp.status_code == 429:
             logging.info("Pausing for rate limit...")
             time.sleep(60)
-            rsp = requests.get("https://explorer.lichess.ovh/lichess", params=params)
+            rsp = session.get("https://explorer.lichess.ovh/lichess", params=params)
 
         return rsp.json()
     except:
@@ -127,11 +128,11 @@ def get_masters_table_fen(fen):
     }
 
     try:
-        rsp = requests.get("https://explorer.lichess.ovh/master", params=params)
+        rsp = session.get("https://explorer.lichess.ovh/master", params=params)
         if rsp.status_code == 429:
             logging.info("Pausing for rate limit...")
             time.sleep(60)
-            rsp = requests.get("https://explorer.lichess.ovh/master", params=params)
+            rsp = session.get("https://explorer.lichess.ovh/master", params=params)
 
         return rsp.json()
     except:
@@ -173,10 +174,6 @@ def get_opposing_moves(board, min_moves=2, min_pct=0.05):
 def prune(q, amt):
     logging.info("Pruning %d...", len(q))
 
-    if len(q) < amt:
-        logging.info("Pruned nothing to %d.", amt)
-        return q, []
-
     deduped = []
     terminal = []
 
@@ -209,37 +206,39 @@ def build(heuristic, color, max_ply=MAX_PLY):
     ply = 0
 
     if color == chess.WHITE:
-        q.appendleft(chess.Board())
-    else:
         board = chess.Board()
-        for m in get_opposing_moves(board):
-            board_copy = board.copy()
-            board_copy.push(m)
-            q.appendleft(board_copy)
+        best = find_best_move(board, heuristic)
+        board.push(best)
+        q.appendleft(board)
+    else:
+        q.appendleft(chess.Board())
 
     while q:
         board = q.pop()
-        fen = board.board_fen()
 
         if board.ply() != ply:
             ply = board.ply()
             q, t = prune(q, ply * 25)
             terminal.extend(t)
 
-        best = best_moves.get(fen)
-
-        if not best:
-            best = find_best_move(board, heuristic)
-            best_moves[fen] = best
-
-        logging.info("q: %d, ply: %d, %s", len(q), board.ply(), board.san(best))
-
-        board.push(best)
-
         if board.ply() < max_ply + color and (opp_moves := get_opposing_moves(board)):
             for m in opp_moves:
                 board_copy = board.copy()
                 board_copy.push(m)
+
+                fen = board_copy.board_fen()
+                best = best_moves.get(fen)
+
+                if not best:
+                    best = find_best_move(board_copy, heuristic)
+                    best_moves[fen] = best
+
+                logging.info(
+                    "q: %d, ply: %d, %s", len(q), board_copy.ply(), board_copy.san(best)
+                )
+
+                board_copy.push(best)
+
                 q.appendleft(board_copy)
         else:
             terminal.append(board)
