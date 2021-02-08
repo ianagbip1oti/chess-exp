@@ -71,7 +71,7 @@ def find_best_move(board, heuristic):
     if len(pass_pct) >= 3:
         candidates = sorted(pass_pct, key=lambda k: -table[k][0])[:5]
     else:
-        candidates = sorted(pass_pct, key=lambda k: -table[k][0])[:3]
+        candidates = sorted(table.keys(), key=lambda k: -table[k][0])[:3]
 
     for m in candidates:
         board_copy = board.copy()
