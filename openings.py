@@ -116,16 +116,23 @@ def get_moves_table_fen(fen, speeds=None, ratings=None):
         "ratings[]": ratings,
     }
 
-    try:
-        rsp = session.get("https://explorer.lichess.ovh/lichess", params=params)
-        if rsp.status_code == 429:
-            logging.info("Pausing for rate limit...")
-            time.sleep(60)
+    retry_count = 0
+    while retry_count < 3:
+        rsp = None  # default to something for exception logging
+        try:
             rsp = session.get("https://explorer.lichess.ovh/lichess", params=params)
+            if rsp.status_code == 429:
+                logging.info("Pausing for rate limit...")
+                time.sleep(60)
+            else:
+                return rsp.json()
+        except:
+            logging.warning("response: %s", rsp)
 
-        return rsp.json()
-    except:
-        logging.warning("response: %s", rsp)
+            logging.info("Pausing before retry...")
+            time.sleep(300)
+
+        retry_count += 1
 
 
 @functools.cache
