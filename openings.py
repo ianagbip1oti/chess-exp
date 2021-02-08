@@ -236,8 +236,8 @@ def build(heuristic, color, max_ply=MAX_PLY):
         logging.info("q: %d, ply: %d", len(q), board.ply())
 
         if board.ply() != ply:
-            q, t = prune(q, ply * 25)
             ply = board.ply()
+            q, t = prune(q, ply * 20)
             terminal.extend(t)
 
         if board.ply() < max_ply + color and (opp_moves := get_opposing_moves(board)):
@@ -277,6 +277,7 @@ def build(heuristic, color, max_ply=MAX_PLY):
         print(game, end="\n\n")
 
     logging.info("Depths: %s", depths)
+
 
 try:
     what = sys.argv[1]
