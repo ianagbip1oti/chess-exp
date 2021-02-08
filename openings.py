@@ -54,13 +54,21 @@ def winrate(board, pov, get_moves_table):
 
 
 def find_best_move(board, heuristic):
+    min_pct = 0.05
     before = heuristic(board, board.turn)
 
     moves = []
 
     table = get_moves_table(board, min_moves=0)
 
-    candidates = sorted(table.keys(), key=lambda k: -table[k][0])[:5]
+    pass_pct = [
+        k for k in table.keys() if table[k][0] > min_pct or table[k][1] > 100_000
+    ]
+
+    if len(pass_pct) >= 3:
+        candidates = sorted(pass_pct, key=lambda k: -table[k][0])[:5]
+    else:
+        candidates = sorted(pass_pct, key=lambda k: -table[k][0])[:3]
 
     for m in candidates:
         board_copy = board.copy()
@@ -156,7 +164,7 @@ def get_moves_table(board, min_moves=200):
     return table
 
 
-def get_opposing_moves(board, min_moves=2, min_pct=0.05):
+def get_opposing_moves(board, min_moves=2, min_pct=0.5):
     # arbitrary number chosen for when we consider it unreliable/not useful/
     # not popular enough to bother analyzing
     table = get_moves_table(board, min_moves=200)
@@ -165,7 +173,7 @@ def get_opposing_moves(board, min_moves=2, min_pct=0.05):
         k for k in table.keys() if table[k][0] > min_pct or table[k][1] > 100_000
     ]
 
-    if len(pass_pct) > min_moves:
+    if len(pass_pct) >= min_moves:
         return pass_pct
 
     return sorted(table.keys(), key=lambda k: -table[k][0])[:min_moves]
@@ -184,16 +192,21 @@ def prune(q, amt):
             continue
 
         tbl = get_moves_table(b)
-        totals[b.fen()] = sum(c for _, c in tbl.values())
+        total = sum(c for _, c in tbl.values())
+        totals[b.fen()] = total
 
-        deduped.append(b)
+        if total < 200:
+            terminal.append(b)
+            continue
+        else:
+            deduped.append(b)
 
         if len(totals) % 20 == 0:
             logging.info("%d...", len(totals))
 
     sorted_q = sorted(deduped, key=lambda b: -totals[b.fen()])
 
-    logging.info("Pruned to %d. (%d dupes)", amt, len(terminal))
+    logging.info("Pruned to %d. (%d dupes/uninteresting)", amt, len(terminal))
 
     return collections.deque(sorted_q[:amt]), sorted_q[amt:] + terminal
 
@@ -220,8 +233,8 @@ def build(heuristic, color, max_ply=MAX_PLY):
         logging.info("q: %d, ply: %d", len(q), board.ply())
 
         if board.ply() != ply:
-            ply = board.ply()
             q, t = prune(q, ply * 25)
+            ply = board.ply()
             terminal.extend(t)
 
         if board.ply() < max_ply + color and (opp_moves := get_opposing_moves(board)):
