@@ -35,6 +35,9 @@ def masters_winrate(board, pov):
 
 
 def winrate(board, pov, get_moves_table):
+    if board.is_checkmate():
+        return 1.0 if board.turn != pov else 0.0
+
     r = get_moves_table(board.fen())
 
     total = r["white"] + r["black"] + r["draws"]
@@ -80,7 +83,7 @@ def find_best_move(board, heuristic):
     if moves:
         top_score = sorted(moves, key=lambda x: -x[1])[0][1]
 
-    if top_score < 0.95 * before:
+    if not moves or top_score < 0.95 * before:
         logging.info(
             "Falling back to stockfish (%f) for %s", top_score - before, board.fen()
         )
@@ -274,7 +277,6 @@ def build(heuristic, color, max_ply=MAX_PLY):
         print(game, end="\n\n")
 
     logging.info("Depths: %s", depths)
-
 
 try:
     what = sys.argv[1]
