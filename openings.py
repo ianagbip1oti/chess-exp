@@ -221,7 +221,7 @@ def prune(q, amt):
     return collections.deque(sorted_q[:amt]), sorted_q[amt:] + terminal
 
 
-def build(heuristic, color, max_ply=MAX_PLY):
+def build(heuristic, color, max_ply=MAX_PLY, prune_factor=20):
     best_moves = {}
 
     q = collections.deque()
@@ -240,7 +240,7 @@ def build(heuristic, color, max_ply=MAX_PLY):
     while q:
         if (next_ply := q[-1].ply()) != ply:
             ply = next_ply
-            q, t = prune(q, ply * 20)
+            q, t = prune(q, ply * prune_factor)
             terminal.extend(t)
 
         board = q.pop()
@@ -297,6 +297,14 @@ try:
     if what == "licb":
         logging.info("Lichess winrate for black...")
         build(lichess_winrate, chess.BLACK, max_ply=ply)
+
+    if what == "licw5":
+        logging.info("Lichess winrate for white (pf:5)...")
+        build(lichess_winrate, chess.WHITE, prune_factor=5)
+
+    if what == "licb5":
+        logging.info("Lichess winrate for black (pf:5)...")
+        build(lichess_winrate, chess.BLACK, prune_factor=5)
 
     if what == "masw":
         logging.info("Masters winrate for white...")
