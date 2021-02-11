@@ -286,32 +286,23 @@ def build(heuristic, color, max_ply=MAX_PLY, prune_factor=20):
     logging.info("Depths: %s", depths)
 
 
+WHATS = {
+    "licw": dict(heuristic=lichess_winrate, color=chess.WHITE),
+    "licb": dict(heuristic=lichess_winrate, color=chess.BLACK),
+    "licw2": dict(heuristic=lichess_winrate, color=chess.WHITE, prune_factor=2),
+    "licb2": dict(heuristic=lichess_winrate, color=chess.BLACK, prune_factor=2),
+    "licw5": dict(heuristic=lichess_winrate, color=chess.WHITE, prune_factor=5),
+    "licb5": dict(heuristic=lichess_winrate, color=chess.BLACK, prune_factor=5),
+    "masw": dict(heuristic=masters_winrate, color=chess.WHITE),
+    "masb": dict(heuristic=masters_winrate, color=chess.BLACK),
+}
+
 try:
     what = sys.argv[1]
     ply = int(sys.argv[2]) if len(sys.argv) > 2 else MAX_PLY
 
-    if what == "licw":
-        logging.info("Lichess winrate for white...")
-        build(lichess_winrate, chess.WHITE, max_ply=ply)
-
-    if what == "licb":
-        logging.info("Lichess winrate for black...")
-        build(lichess_winrate, chess.BLACK, max_ply=ply)
-
-    if what == "licw5":
-        logging.info("Lichess winrate for white (pf:5)...")
-        build(lichess_winrate, chess.WHITE, prune_factor=5)
-
-    if what == "licb5":
-        logging.info("Lichess winrate for black (pf:5)...")
-        build(lichess_winrate, chess.BLACK, prune_factor=5)
-
-    if what == "masw":
-        logging.info("Masters winrate for white...")
-        build(masters_winrate, chess.WHITE, max_ply=ply)
-
-    if what == "masb":
-        logging.info("Masters winrate for black...")
-        build(masters_winrate, chess.BLACK, max_ply=ply)
+    args = WHATS[what]
+    logging.info("Building for %s", args)
+    build(max_ply=ply, **args)
 finally:
     engine.quit()
