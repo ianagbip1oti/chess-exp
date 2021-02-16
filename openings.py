@@ -88,7 +88,7 @@ def find_best_move(board, heuristic):
     if moves:
         top_score = sorted(moves, key=lambda x: -x[1])[0][1]
 
-    if len(moves) < 2 or top_score < 0.95 * before or top_score < 0.45:
+    if len(moves) < 2 or top_score < 0.95 * before or top_score < 0.40:
         logging.info(
             "Falling back to stockfish (%f) for %s", top_score - before, board.fen()
         )
