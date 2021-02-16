@@ -46,8 +46,13 @@ def winrate(board, pov, get_moves_table):
     if total == 0:
         return 0.0
 
+    return wsi_lower(wins, total)
+
+
+def wsi_lower(wins, total):
     z = 1.96
     phat = wins / total
+    n = total
 
     a = phat + z * z / (2 * total)
     b = z * math.sqrt((phat * (1 - phat) + z * z / (4 * total)) / total)
@@ -83,7 +88,7 @@ def find_best_move(board, heuristic):
     if moves:
         top_score = sorted(moves, key=lambda x: -x[1])[0][1]
 
-    if len(moves) < 2 or top_score < 0.95 * before:
+    if len(moves) < 2 or top_score < 0.95 * before or top_score < 0.45:
         logging.info(
             "Falling back to stockfish (%f) for %s", top_score - before, board.fen()
         )
@@ -296,7 +301,6 @@ WHATS = {
     "masw": dict(heuristic=masters_winrate, color=chess.WHITE),
     "masb": dict(heuristic=masters_winrate, color=chess.BLACK),
 }
-
 try:
     what = sys.argv[1]
     ply = int(sys.argv[2]) if len(sys.argv) > 2 else MAX_PLY
