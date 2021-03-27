@@ -5,8 +5,7 @@ WORKDIR /app
 
 RUN curl https://stockfishchess.org/files/stockfish_13_linux_x64.zip -o stockfish.zip \
     && unzip stockfish.zip \
-    && chmod +x stockfish_13_linux_x64 \
-    && ln -s /app/stockfish_13_linux_x64 /usr/bin/stockfish
+    && ln -s /app/stockfish_13_linux_x64/stockfish_13_linux_x64 /usr/bin/stockfish
 
 RUN pip install python-chess requests
 
