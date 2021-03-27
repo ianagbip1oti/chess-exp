@@ -113,7 +113,7 @@ def find_best_move(board, heuristic):
 @functools.cache
 def get_moves_table_fen(fen, speeds=None, ratings=None):
     speeds = speeds or ["blitz", "rapid", "classical"]
-    ratings = ratings or [1600, 1800, 2000, 2200]
+    ratings = ratings or [1600, 1800, 2000]
 
     params = {
         "fen": fen,
