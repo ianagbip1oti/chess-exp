@@ -252,6 +252,9 @@ def build(heuristic, color, max_ply=MAX_PLY, prune_factor=20):
             q, t = prune(q, ply * prune_factor)
             terminal.extend(t)
 
+        if not q:
+            break
+
         board = q.pop()
 
         logging.info("q: %d, ply: %d", len(q), board.ply())
