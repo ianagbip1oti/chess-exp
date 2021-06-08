@@ -19,9 +19,42 @@ engine = chess.engine.SimpleEngine.popen_uci("/usr/bin/stockfish")
 session = requests.Session()
 
 
-def winning(board, pov):
-    score = engine.analyse(board, chess.engine.Limit(depth=15))
+def winning(board, pov, depth=15):
+    score = engine.analyse(board, chess.engine.Limit(depth=depth))
     return score["score"].pov(pov)
+
+
+def prune_candidates(candidates, board, pov, depth, prune):
+    scores = []
+    for c in candidates:
+        board_copy = board.copy()
+        board_copy.push(c)
+        score = winning(board_copy, pov=pov, depth=depth)
+        scores.append((c, score))
+
+    scores = sorted(scores, key=lambda s: -s[1])
+    return [s[0] for s in scores][:prune]
+
+
+def easy_stockfish(board, pov, *args, **kwargs):
+    candidates = board.legal_moves
+
+    candidates = prune_candidates(candidates, board, pov, 3, 5)
+    candidates = prune_candidates(candidates, board, pov, 5, 3)
+    candidates = prune_candidates(candidates, board, pov, 10, 2)
+    candidates = prune_candidates(candidates, board, pov, 15, 1)
+
+    return candidates[0]
+
+
+def stockfish(board, pov):
+    scores = [
+        engine.analyse(board, chess.engine.Limit(depth=d))["score"].pov(pov).score(mate_score=10000)
+        for d in (5, 10, 15)
+    ]
+
+    return sum(a * b for a, b in zip(scores, (3, 2, 1)))
+
 
 
 # Choose most played moves (same logic as opposition moves we consider)
@@ -61,7 +94,7 @@ def wsi_lower(wins, total):
     return (a - b) / c
 
 
-def find_best_move(board, heuristic):
+def find_best_move(board, heuristic, *args, **kwargs):
     min_pct = 0.05
     before = heuristic(board, board.turn)
 
@@ -230,7 +263,7 @@ def prune(q, amt):
     return collections.deque(sorted_q[:amt]), sorted_q[amt:] + terminal
 
 
-def build(heuristic, color, max_ply=MAX_PLY, prune_factor=20):
+def build(heuristic, color, max_ply=MAX_PLY, prune_factor=20, find_best_move=find_best_move):
     best_moves = {}
 
     q = collections.deque()
@@ -239,7 +272,7 @@ def build(heuristic, color, max_ply=MAX_PLY, prune_factor=20):
 
     if color == chess.WHITE:
         board = chess.Board()
-        best = find_best_move(board, heuristic)
+        best = find_best_move(board, heuristic, color)
         logging.info("q: %d, ply: %d, %s", len(q), board.ply(), board.san(best))
         board.push(best)
         q.appendleft(board)
@@ -268,7 +301,7 @@ def build(heuristic, color, max_ply=MAX_PLY, prune_factor=20):
                 best = best_moves.get(fen)
 
                 if not best:
-                    best = find_best_move(board_copy, heuristic)
+                    best = find_best_move(board_copy, heuristic, color)
                     best_moves[fen] = best
 
                 logging.info("vs %s... %s", board.san(m), board_copy.san(best))
@@ -307,6 +340,8 @@ WHATS = {
     "licb5": dict(heuristic=lichess_winrate, color=chess.BLACK, prune_factor=5),
     "masw": dict(heuristic=masters_winrate, color=chess.WHITE),
     "masb": dict(heuristic=masters_winrate, color=chess.BLACK),
+    "stkw": dict(heuristic=None, find_best_move=easy_stockfish, color=chess.WHITE, prune_factor=2),
+    "stkb": dict(heuristic=None, find_best_move=easy_stockfish, color=chess.BLACK, prune_factor=2),
 }
 try:
     what = sys.argv[1]
