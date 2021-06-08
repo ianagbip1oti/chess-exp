@@ -25,7 +25,7 @@ jobs:
     needs: release
     strategy:
       matrix:
-        book: [licw, licb, licw2, licb2, licw5, licb5, stkw, stkb]
+        book: [licw2, licb2, stkw, stkb]
 
     steps:
       - uses: actions/checkout@v2
