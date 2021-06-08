@@ -40,8 +40,9 @@ def easy_stockfish(board, pov, *args, **kwargs):
     candidates = board.legal_moves
 
     candidates = prune_candidates(candidates, board, pov, 3, 5)
-    candidates = prune_candidates(candidates, board, pov, 5, 3)
-    candidates = prune_candidates(candidates, board, pov, 10, 2)
+    candidates = prune_candidates(candidates, board, pov, 6, 4)
+    candidates = prune_candidates(candidates, board, pov, 9, 3)
+    candidates = prune_candidates(candidates, board, pov, 12, 2)
     candidates = prune_candidates(candidates, board, pov, 15, 1)
 
     return candidates[0]
@@ -340,15 +341,19 @@ WHATS = {
     "licb5": dict(heuristic=lichess_winrate, color=chess.BLACK, prune_factor=5),
     "masw": dict(heuristic=masters_winrate, color=chess.WHITE),
     "masb": dict(heuristic=masters_winrate, color=chess.BLACK),
-    "stkw": dict(heuristic=None, find_best_move=easy_stockfish, color=chess.WHITE, prune_factor=2),
-    "stkb": dict(heuristic=None, find_best_move=easy_stockfish, color=chess.BLACK, prune_factor=2),
+    "stkw": dict(heuristic=None, find_best_move=easy_stockfish, color=chess.WHITE, prune_factor=3, max_ply=30),
+    "stkb": dict(heuristic=None, find_best_move=easy_stockfish, color=chess.BLACK, prune_factor=3, max_ply=30),
 }
 try:
     what = sys.argv[1]
     ply = int(sys.argv[2]) if len(sys.argv) > 2 else MAX_PLY
 
     args = WHATS[what]
+
+    if "max_ply" not in args:
+        max_ply- ply
+
     logging.info("Building for %s", args)
-    build(max_ply=ply, **args)
+    build(**args)
 finally:
     engine.quit()
