@@ -351,7 +351,7 @@ try:
     args = WHATS[what]
 
     if "max_ply" not in args:
-        max_ply- ply
+        max_ply = ply
 
     logging.info("Building for %s", args)
     build(**args)
